@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nâng Cấp Ảnh - Gom Nhóm Pixel Chuyên Dụng</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+        .container-card {
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+        .image-display {
+            min-height: 200px;
+            background-color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+        /* Custom checkbox style */
+        .custom-checkbox input:checked + .checkmark {
+            background-color: #4f46e5;
+            border-color: #4f46e5;
+        }
+        .custom-checkbox .checkmark {
+            width: 1.25rem;
+            height: 1.25rem;
+            border-radius: 0.25rem;
+            border: 2px solid #d1d5db;
+            transition: all 0.2s;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen flex items-center justify-center">
+
+    <div id="app" class="w-full max-w-4xl bg-white p-6 md:p-10 rounded-xl container-card">
+        <h1 class="text-3xl font-bold text-gray-900 mb-6 text-center">
+            Nâng Cấp Ảnh - Gom Nhóm Pixel Chuyên Dụng
+        </h1>
+        <p class="text-center text-gray-600 mb-8">
+            Chỉ sử dụng phương pháp **Gom Nhóm Pixel** để làm mượt ảnh.
+        </p>
+
+        <div class="space-y-4 mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div>
+                <label for="imageUpload" class="block text-sm font-medium text-gray-700 mb-1">1. Chọn Hình Ảnh Gốc</label>
+                <input type="file" id="imageUpload" accept="image/*" class="w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-indigo-50 file:text-indigo-700
+                    hover:file:bg-indigo-100" />
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="scaleFactorInput" class="block text-sm font-medium text-gray-700 mb-1">2. Hệ Số Nâng Cấp (X lần)</label>
+                    <input type="number" id="scaleFactorInput" value="2" min="1" max="10" step="0.5"
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
+                        onchange="updateButtonText()" />
+                    <p class="mt-1 text-xs text-gray-500">Đặt X = 1.0 đến 10.0.</p>
+                </div>
+            </div>
+            
+            <!-- CONTROLS FOR PIXEL CLUSTERING -->
+            <div id="pixelClusteringControl" class="pt-2 border-t border-gray-200">
+                <label for="colorThresholdRange" class="block text-sm font-medium text-gray-700 mb-1">
+                    3. Ngưỡng Màu Sắc (Độ "Dính" Pixel): <span id="colorThresholdValue">25</span>
+                </label>
+                <input type="range" id="colorThresholdRange" min="10" max="60" value="25" step="5"
+                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg dark:bg-gray-700"
+                    oninput="document.getElementById('colorThresholdValue').textContent = this.value" />
+                <p class="mt-1 text-xs text-gray-500">Giá trị càng thấp, pixel càng "kén chọn" (cần rất gần màu mới dính). Thích hợp cho ảnh pixel art.</p>
+            </div>
+
+            <div class="pt-4 border-t border-gray-200">
+                <p class="text-sm font-medium text-gray-700 mb-2">4. Xử Lý Hậu Kỳ</p>
+                <div class="flex flex-wrap gap-4">
+                    <label class="custom-checkbox flex items-center cursor-pointer">
+                        <input type="checkbox" id="applySharpening" class="hidden">
+                        <span class="checkmark flex items-center justify-center mr-2">
+                            <svg class="w-3 h-3 text-white fill-current hidden" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>
+                        </span>
+                        <span class="text-sm text-gray-700">Áp Dụng Làm Sắc Nét (USM Sharpening)</span>
+                    </label>
+                    <label class="custom-checkbox flex items-center cursor-pointer">
+                        <input type="checkbox" id="applyHDR" class="hidden">
+                        <span class="checkmark flex items-center justify-center mr-2">
+                            <svg class="w-3 h-3 text-white fill-current hidden" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>
+                        </span>
+                        <span class="text-sm text-gray-700">Áp Dụng Tone Mapping HDR (Tăng tương phản)</span>
+                    </label>
+                </div>
+            </div>
+
+            <button id="upscaleButton"
+                class="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg font-semibold shadow-md hover:bg-indigo-700 disabled:bg-indigo-300 transition duration-200"
+                onclick="upscaleImage()" disabled>
+                <span id="buttonText">Bắt Đầu Nâng Cấp Ảnh (<span id="currentScaleFactor">2</span>X - Gom Nhóm Pixel)</span>
+                <span id="spinner" class="hidden ml-2">
+                    <svg class="animate-spin h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </span>
+            </button>
+            
+            <!-- PROGRESS BAR -->
+            <div id="progressContainer" class="mt-4 hidden">
+                <p class="text-sm text-gray-700 mb-1">Tiến trình xử lý:</p>
+                <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                    <div id="progressBar" class="bg-indigo-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <p id="progressStatus" class="mt-1 text-xs text-indigo-600 text-center"></p>
+            </div>
+
+        </div>
+
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div>
+                <h2 class="text-xl font-semibold text-gray-800 mb-3 border-b pb-2">Ảnh Gốc</h2>
+                <div id="originalImageContainer" class="image-display rounded-lg overflow-hidden border border-gray-300">
+                    <img id="originalImage" src="" alt="Ảnh Gốc" class="w-full h-auto object-contain hidden" />
+                    <span id="originalPlaceholder">Chưa có ảnh được tải lên</span>
+                </div>
+            </div>
+
+            
+            <div>
+                <h2 class="text-xl font-semibold text-gray-800 mb-3 border-b pb-2">Ảnh Nâng Cấp (Kết Quả)</h2>
+                <div id="upscaledImageContainer" class="image-display rounded-lg overflow-hidden border border-gray-300">
+                    <canvas id="resultCanvas" class="w-full h-auto object-contain hidden"></canvas>
+                    <span id="upscaledPlaceholder">Kết quả sẽ hiển thị ở đây</span>
+                </div>
+                <div id="errorMessage" class="mt-4 text-red-600 text-sm hidden"></div>
+
+                
+                <button id="downloadButton"
+                    class="mt-4 w-full bg-green-600 text-white py-2 px-4 rounded-lg font-semibold shadow-md hover:bg-green-700 transition duration-200 hidden"
+                    onclick="downloadImage()">
+                    Tải Xuống Ảnh Nâng Cấp
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const imageUpload = document.getElementById('imageUpload');
+        const upscaleButton = document.getElementById('upscaleButton');
+        const originalImage = document.getElementById('originalImage');
+        const originalPlaceholder = document.getElementById('originalPlaceholder');
+        const upscaledPlaceholder = document.getElementById('upscaledPlaceholder');
+        const buttonText = document.getElementById('buttonText');
+        const spinner = document.getElementById('spinner');
+        const errorMessage = document.getElementById('errorMessage');
+        const scaleFactorInput = document.getElementById('scaleFactorInput');
+        const currentScaleFactorSpan = document.getElementById('currentScaleFactor');
+        const downloadButton = document.getElementById('downloadButton'); 
+        const resultCanvas = document.getElementById('resultCanvas');
+        
+        // Checkbox mới
+        const applySharpening = document.getElementById('applySharpening');
+        const applyHDR = document.getElementById('applyHDR');
+        
+        // Controls for Pixel Clustering
+        const colorThresholdRange = document.getElementById('colorThresholdRange');
+
+        // --- Progress Bar Elements ---
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressStatus = document.getElementById('progressStatus');
+
+
+        // Hàm cập nhật thanh tiến trình
+        function updateProgress(percentage, status) {
+            progressBar.style.width = percentage + '%';
+            progressStatus.textContent = `${status} (${Math.round(percentage)}%)`;
+            progressContainer.classList.remove('hidden');
+        }
+
+        // Toggle visibility of the SVG checkmark
+        document.querySelectorAll('.custom-checkbox input').forEach(input => {
+            input.addEventListener('change', (e) => {
+                const checkmark = e.target.nextElementSibling.querySelector('svg');
+                if (e.target.checked) {
+                    checkmark.classList.remove('hidden');
+                } else {
+                    checkmark.classList.add('hidden');
+                }
+            });
+        });
+
+        // Hàm cập nhật chữ trên nút dựa trên giá trị X và Phương pháp hiện tại
+        function updateButtonText() {
+            let factor = parseFloat(scaleFactorInput.value);
+            
+            if (isNaN(factor) || factor < 1 || factor > 10) {
+                factor = 2; // Giá trị mặc định an toàn
+                scaleFactorInput.value = 2;
+            }
+            currentScaleFactorSpan.textContent = factor;
+            buttonText.innerHTML = `Bắt Đầu Nâng Cấp Ảnh (${factor}X - Gom Nhóm Pixel)`;
+        }
+
+        // Cập nhật trạng thái nút khi có file
+        imageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            
+            // Ẩn nút download và progress bar khi tải file mới
+            downloadButton.classList.add('hidden');
+            progressContainer.classList.add('hidden');
+
+            if (file) {
+                const imageUrl = URL.createObjectURL(file);
+                
+                originalImage.onload = () => {
+                    upscaleButton.disabled = false;
+                    originalImage.classList.remove('hidden');
+                    originalPlaceholder.classList.add('hidden');
+                    // Xóa canvas cũ
+                    resultCanvas.classList.add('hidden');
+                    upscaledPlaceholder.classList.remove('hidden');
+                    updateButtonText();
+                    upscaledPlaceholder.textContent = `Nhấn nút 'Bắt Đầu Nâng Cấp Ảnh (${currentScaleFactorSpan.textContent}X - Gom Nhóm Pixel)'`;
+                };
+                
+                originalImage.src = imageUrl;
+
+            } else {
+                upscaleButton.disabled = true;
+                originalImage.classList.add('hidden');
+                originalPlaceholder.classList.remove('hidden');
+                upscaledPlaceholder.textContent = "Kết quả sẽ hiển thị ở đây";
+            }
+        });
+        
+        /**
+         * Hàm tính toán sự khác biệt màu sắc (khoảng cách Euclidean)
+         */
+        function colorDiff(r1, g1, b1, r2, g2, b2) {
+            return Math.sqrt(
+                (r1 - r2) ** 2 +
+                (g1 - g2) ** 2 +
+                (b1 - b2) ** 2
+            );
+        }
+        
+        /**
+         * Hàm lấy độ sáng (Luminance) của một pixel (0-255)
+         */
+        function getLuminance(r, g, b) {
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        }
+
+        /**
+         * Phương pháp Bicubic/Lanczos (sử dụng tối ưu hóa của Canvas).
+         * Dùng làm bước 1 để có nền ảnh mượt.
+         */
+        function upscaleImageBicubic(img, scaleFactor) {
+            updateProgress(10, "Bicubic: Khởi tạo Canvas (Bước nền)");
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const originalWidth = img.naturalWidth;
+            const originalHeight = img.naturalHeight;
+            canvas.width = originalWidth * scaleFactor;
+            canvas.height = originalHeight * scaleFactor;
+
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high'; 
+            
+            updateProgress(20, "Bicubic: Đang vẽ ảnh");
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            return {
+                canvas: canvas,
+                imageData: ctx.getImageData(0, 0, canvas.width, canvas.height)
+            };
+        }
+
+
+        /**
+         * Phương pháp: Pixel Clustering Smoothing (Gom Nhóm Pixel)
+         */
+        function upscaleImagePixelClustering(img, scaleFactor, colorThreshold) {
+            // B1: Phóng to bằng Bicubic/Lanczos (làm mượt tạm thời)
+            const { canvas, imageData } = upscaleImageBicubic(img, scaleFactor);
+            const ctx = canvas.getContext('2d');
+            
+            const width = imageData.width;
+            const height = imageData.height;
+            const pixels = imageData.data;
+            const finalPixels = new Uint8ClampedArray(pixels.length);
+            finalPixels.set(pixels); // Bắt đầu với ảnh Bicubic
+
+            // Ngưỡng quyết định "gần màu" (sử dụng giá trị từ thanh trượt)
+            const COLOR_DIFF_SMOOTH_THRESHOLD = colorThreshold; 
+            // Kích thước kernel làm mượt (3x3 là đủ)
+            const KERNEL_SIZE = 3;
+            const HALF_KERNEL = Math.floor(KERNEL_SIZE / 2);
+
+            updateProgress(30, `Gom Nhóm Pixel: Bắt đầu xử lý (Ngưỡng: ${colorThreshold})`);
+
+            for (let y = HALF_KERNEL; y < height - HALF_KERNEL; y++) {
+                if (y % 100 === 0) {
+                    const progress = 30 + (y / height) * 50;
+                    updateProgress(progress, "Gom Nhóm Pixel: Đang xử lý hàng pixel");
+                }
+
+                for (let x = HALF_KERNEL; x < width - HALF_KERNEL; x++) {
+                    const index = (y * width + x) * 4;
+                    const r = pixels[index];
+                    const g = pixels[index + 1];
+                    const b = pixels[index + 2];
+                    
+                    let totalR = 0, totalG = 0, totalB = 0;
+                    let count = 0;
+
+                    // 1. Quét 3x3 lân cận
+                    for (let ky = -HALF_KERNEL; ky <= HALF_KERNEL; ky++) {
+                        for (let kx = -HALF_KERNEL; kx <= HALF_KERNEL; kx++) {
+                            const srcX = x + kx;
+                            const srcY = y + ky;
+                            const nIndex = (srcY * width + srcX) * 4;
+                            
+                            const nR = pixels[nIndex];
+                            const nG = pixels[nIndex + 1];
+                            const nB = pixels[nIndex + 2];
+                            
+                            // 2. Điều kiện "dính vào nhau"
+                            const isCloseColor = colorDiff(r, g, b, nR, nG, nB) <= COLOR_DIFF_SMOOTH_THRESHOLD;
+                            
+                            if (isCloseColor) {
+                                // Áp dụng làm mượt: Cộng dồn màu sắc
+                                totalR += nR;
+                                totalG += nG;
+                                totalB += nB;
+                                count++;
+                            } else if (kx === 0 && ky === 0) {
+                                // Nếu pixel trung tâm không 'dính' với lân cận, ta vẫn tính nó
+                                totalR += r;
+                                totalG += g;
+                                totalB += b;
+                                count++;
+                            }
+                        }
+                    }
+                    
+                    // 3. Tính trung bình màu
+                    if (count > 0) {
+                        finalPixels[index] = Math.max(0, Math.min(255, Math.round(totalR / count)));
+                        finalPixels[index + 1] = Math.max(0, Math.min(255, Math.round(totalG / count)));
+                        finalPixels[index + 2] = Math.max(0, Math.min(255, Math.round(totalB / count)));
+                    }
+                    // Giữ nguyên Alpha
+                    finalPixels[index + 3] = pixels[index + 3]; 
+                }
+            }
+
+            // BƯỚC 4: Đặt dữ liệu đã xử lý trở lại canvas
+            updateProgress(90, "Gom Nhóm Pixel: Đặt dữ liệu ảnh mới");
+            const finalImageData = ctx.createImageData(width, height);
+            finalImageData.data.set(finalPixels);
+            
+            return {
+                canvas: canvas,
+                imageData: finalImageData
+            };
+        }
+
+        /**
+         * POST-PROCESSING 1: Làm Sắc Nét USM (Unsharp Masking)
+         */
+        function applyUSMSharpening(imageData) {
+            const width = imageData.width;
+            const height = imageData.height;
+            const pixels = imageData.data;
+            const output = new Uint8ClampedArray(pixels.length);
+
+            // Kernel Sharpening (Unsharp Mask - làm nét cơ bản)
+            const kernel = [
+                0, -1, 0,
+                -1, 5, -1,
+                0, -1, 0
+            ];
+            const kernelSize = 3;
+            const halfKernel = Math.floor(kernelSize / 2);
+            
+            // Hệ số làm nét (Sharpen Factor)
+            const sharpenFactor = 1.0; 
+
+            updateProgress(92, "Hậu kỳ: Làm Sắc Nét USM...");
+
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const destIndex = (y * width + x) * 4;
+                    
+                    let r = 0, g = 0, b = 0;
+
+                    // Convolution
+                    for (let ky = 0; ky < kernelSize; ky++) {
+                        for (let kx = 0; kx < kernelSize; kx++) {
+                            const srcX = x + kx - halfKernel;
+                            const srcY = y + ky - halfKernel;
+
+                            if (srcX >= 0 && srcX < width && srcY >= 0 && srcY < height) {
+                                const srcIndex = (srcY * width + srcX) * 4;
+                                const weight = kernel[ky * kernelSize + kx];
+
+                                r += pixels[srcIndex] * weight;
+                                g += pixels[srcIndex + 1] * weight;
+                                b += pixels[srcIndex + 2] * weight;
+                            }
+                        }
+                    }
+
+                    // Áp dụng hệ số làm nét và clamp
+                    output[destIndex] = Math.max(0, Math.min(255, r * sharpenFactor));
+                    output[destIndex + 1] = Math.max(0, Math.min(255, g * sharpenFactor));
+                    output[destIndex + 2] = Math.max(0, Math.min(255, b * sharpenFactor));
+                    output[destIndex + 3] = pixels[destIndex + 3]; // Alpha
+                }
+            }
+
+            imageData.data.set(output);
+            return imageData;
+        }
+
+
+        /**
+         * POST-PROCESSING 2: Mô phỏng HDR Tone Mapping (Reinhard Approximation)
+         */
+        function applyHDRToneMapping(imageData) {
+            const pixels = imageData.data;
+            const output = new Uint8ClampedArray(pixels.length);
+            const numPixels = imageData.width * imageData.height;
+            
+            updateProgress(95, "Hậu kỳ: HDR Tone Mapping...");
+
+            let totalLuminance = 0;
+            for (let i = 0; i < pixels.length; i += 4) {
+                totalLuminance += getLuminance(pixels[i], pixels[i+1], pixels[i+2]);
+            }
+            const L_avg = totalLuminance / numPixels;
+            
+            const key = 0.18; 
+            const scaledLuminance = L_avg === 0 ? 1 : key / L_avg;
+
+            for (let i = 0; i < pixels.length; i += 4) {
+                const r = pixels[i];
+                const g = pixels[i+1];
+                const b = pixels[i+2];
+                
+                const L_in = getLuminance(r, g, b) / 255.0; 
+                
+                const L_mapped = (L_in * scaledLuminance) / (1 + L_in * scaledLuminance);
+
+                const ratio = L_mapped / (L_in * scaledLuminance === 0 ? 1 : L_in * scaledLuminance);
+                
+                output[i] = Math.max(0, Math.min(255, Math.floor(r * ratio)));
+                output[i + 1] = Math.max(0, Math.min(255, Math.floor(g * ratio)));
+                output[i + 2] = Math.max(0, Math.min(255, Math.floor(b * ratio)));
+                output[i + 3] = pixels[i + 3]; 
+            }
+
+            imageData.data.set(output);
+            return imageData;
+        }
+
+
+        async function upscaleImage() {
+            const file = imageUpload.files[0];
+            let scaleFactor = parseFloat(scaleFactorInput.value);
+            const colorThreshold = parseFloat(colorThresholdRange.value); // Lấy giá trị ngưỡng màu
+            const isSharpening = applySharpening.checked; // Lấy trạng thái checkbox Làm Sắc Nét
+            const isHDR = applyHDR.checked; // Lấy trạng thái HDR
+
+            downloadButton.classList.add('hidden');
+
+            // 1. Kiểm tra và chuẩn hóa Scale Factor
+            if (isNaN(scaleFactor) || scaleFactor < 1) {
+                scaleFactor = 2; 
+                scaleFactorInput.value = 2;
+                errorMessage.textContent = "Hệ số phóng đại không hợp lệ, sử dụng mặc định là 2X.";
+                errorMessage.classList.remove('hidden');
+            } else if (scaleFactor > 10) {
+                scaleFactor = 10;
+                scaleFactorInput.value = 10;
+                errorMessage.textContent = "Hệ số phóng đại tối đa là 10X, đã đặt thành 10X.";
+                errorMessage.classList.remove('hidden');
+            } else {
+                 errorMessage.classList.add('hidden');
+            }
+
+            if (!file) {
+                errorMessage.textContent = "Vui lòng chọn một file ảnh.";
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+
+            // Thiết lập trạng thái loading
+            upscaleButton.disabled = true;
+            spinner.classList.remove('hidden');
+            progressContainer.classList.remove('hidden'); 
+            updateProgress(0, "Đang khởi tạo...");
+            
+            updateButtonText();
+            const postProcessText = `${isSharpening ? '+ Sắc Nét' : ''} ${isHDR ? '+ HDR' : ''}`;
+            upscaledPlaceholder.textContent = `Đang Nâng cấp ${scaleFactor}X bằng Gom Nhóm Pixel ${postProcessText}...`;
+            resultCanvas.classList.add('hidden');
+            upscaledPlaceholder.classList.remove('hidden');
+            
+
+            try {
+                if (originalImage.naturalWidth === 0) {
+                    throw new Error("Ảnh gốc chưa được tải xong.");
+                }
+
+                let result;
+                
+                // 2. Phương pháp Gom Nhóm Pixel
+                result = upscaleImagePixelClustering(originalImage, scaleFactor, colorThreshold);
+                
+                let finalImageData = result.imageData;
+
+                // 3. Áp dụng XỬ LÝ HẬU KỲ
+                if (isSharpening) {
+                    finalImageData = applyUSMSharpening(finalImageData);
+                }
+                if (isHDR) {
+                    finalImageData = applyHDRToneMapping(finalImageData);
+                }
+
+                // 4. Hiển thị kết quả lên Canvas
+                updateProgress(98, "Đang hoàn tất...");
+                const ctx = resultCanvas.getContext('2d');
+                resultCanvas.width = finalImageData.width;
+                resultCanvas.height = finalImageData.height;
+                ctx.putImageData(finalImageData, 0, 0);
+
+                resultCanvas.classList.remove('hidden');
+                upscaledPlaceholder.classList.add('hidden');
+
+                // 5. Hiển thị nút download sau khi thành công
+                downloadButton.classList.remove('hidden');
+                
+                updateProgress(100, "HOÀN TẤT!");
+            } catch (error) {
+                console.error("Lỗi trong quá trình xử lý ảnh:", error);
+                errorMessage.textContent = `Lỗi: ${error.message}. Không thể xử lý ảnh.`;
+                errorMessage.classList.remove('hidden');
+                upscaledPlaceholder.textContent = "Thất bại. Vui lòng thử lại.";
+                resultCanvas.classList.add('hidden');
+                upscaledPlaceholder.classList.remove('hidden');
+                downloadButton.classList.add('hidden');
+                progressContainer.classList.add('hidden'); 
+            } finally {
+                // Thiết lập lại trạng thái
+                upscaleButton.disabled = false;
+                updateButtonText();
+                spinner.classList.add('hidden');
+                if (progressStatus.textContent === "HOÀN TẤT!") {
+                    setTimeout(() => {
+                        progressContainer.classList.add('hidden');
+                    }, 2000);
+                }
+            }
+        }
+
+        /**
+         * Hàm tải xuống ảnh đã được upscaled.
+         */
+        function downloadImage() {
+            const imageURL = resultCanvas.toDataURL('image/png');
+            if (imageURL && imageURL !== "") {
+                const a = document.createElement('a');
+                a.href = imageURL;
+                
+                let post = '';
+                if (applySharpening.checked) post += '_Sharpen';
+                if (applyHDR.checked) post += '_HDR';
+                
+                const method = `PixelCluster_Threshold${colorThresholdRange.value}`;
+                a.download = `upscaled_${currentScaleFactorSpan.textContent}x_${method}${post}_${Date.now()}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } else {
+                errorMessage.textContent = "Không có ảnh để tải xuống.";
+                errorMessage.classList.remove('hidden');
+            }
+        }
+
+        // Khởi tạo trạng thái nút
+        updateButtonText();
+    </script>
+</body>
+</html>
